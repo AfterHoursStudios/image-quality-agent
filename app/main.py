@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pathlib import Path
 from app.routers import images
 import os
@@ -33,14 +32,23 @@ app.add_middleware(
 # Register API routers
 app.include_router(images.router)
 
-# Static files directory
+# Static files directory - check public/ first (Vercel), then app/static/ (local)
+project_root = Path(__file__).parent.parent
+public_dir = project_root / "public"
 static_dir = Path(__file__).parent / "static"
 
 
 @app.get("/")
 async def serve_frontend():
     """Serve the frontend application."""
-    return FileResponse(static_dir / "index.html")
+    # Check public/ first (Vercel deployment)
+    if (public_dir / "index.html").exists():
+        return FileResponse(public_dir / "index.html")
+    # Fall back to app/static/ (local development)
+    if (static_dir / "index.html").exists():
+        return FileResponse(static_dir / "index.html")
+    # If neither exists, redirect to static path
+    return RedirectResponse("/index.html", status_code=307)
 
 
 @app.get("/health")
