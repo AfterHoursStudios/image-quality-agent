@@ -1160,9 +1160,22 @@
             errorMessage.classList.remove('active');
         }
 
-        async function loadHistory() {
+        async function loadHistory(retries = 2) {
             try {
                 const response = await fetch('/api/images?page_size=8');
+
+                // Handle non-OK responses
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('API error:', response.status, text);
+                    if (retries > 0) {
+                        console.log('Retrying... (cold start may be loading)');
+                        setTimeout(() => loadHistory(retries - 1), 2000);
+                        return;
+                    }
+                    throw new Error(text);
+                }
+
                 const data = await response.json();
 
                 const historyGrid = document.getElementById('historyGrid');
